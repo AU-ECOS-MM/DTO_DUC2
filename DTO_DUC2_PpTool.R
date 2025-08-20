@@ -10,7 +10,7 @@ library(lubridate)
 library(Rmisc)
 library(ggpubr)
 library(bslib)
-library(stringer)
+library(stringr)
 
 ##Functions
 source('DPHpDPDplot.R')
@@ -27,12 +27,26 @@ ui <- page_fillable(
       navset_card_tab(
         nav_panel(title="Detection Positive Hours per Day",
            plotOutput('dph_plot', height = '600px')),
-        nav_panel(title = 'Daily Distribution of Detections', p('TBD'))
-    )
-  ),
-  card(card_header("Station Details"),
+        nav_panel(title = 'Daily Distribution of Detections', p('TBD')),
+        nav_panel(title = 'Pressure Curve?', p('TBD'))
+    ),
+    
+    card(card_header("Station Details"),
        tableOutput("station_table")
+    ),
+    card(card_header('Settings'),
+         sliderInput('YMselect',
+                     'Dates:',
+                     min = as.Date('2015-01-01', '%Y-%m-%d'),
+                     max = as.Date(Sys.Date(), '%Y-%m-%d'),
+                     value=c(as.Date('2015-01-01', '%Y-%m-%d'),as.Date(Sys.Date(), '%Y-%m-%d'))),
+         imageOutput('logo'),
+         ), ## Update this if older data is incorporated
+  
+    col_widths = c(6,6,8,4),
+    row_heights = c(3,1)
   )
+  
 
 )
 
@@ -84,6 +98,10 @@ server <- function(input, output, session) {
     DPHpDPDplot(selected_data())
 
   })
+  
+  output$logo <- renderImage({
+    list(src = 'AU logo.png', height= '5%')
+  }, deleteFile = FALSE)
 }
 
 shinyApp(ui, server)
