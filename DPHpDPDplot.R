@@ -1,3 +1,5 @@
+library(dplyr)
+
 DPHpDPDplot = function(selected_data){ 
   
   selected_data=selected_data[order(selected_data$datetime),]
@@ -5,25 +7,22 @@ DPHpDPDplot = function(selected_data){
   selected_data$Year=year(selected_data$datetime)
   selected_data$Mon=month(selected_data$datetime)
   
-  selected_data$DPH=1
-  
-  
-  
   DPD_all = selected_data %>%
-    group_by(as.Date(datetime), Group, Mon) %>%
-    tally(DPH)
+    group_by(as.Date(datetime), Station, Mon) %>%
+    dplyr::summarize(totalHours=n(), DPH=sum(PPM)) 
   
-  DPD_all$posDay = ifelse(DPD_all$n>=1,1,0)
+  DPD_all$posDay = ifelse(DPD_all$DPH>=1,1,0)
   colnames(DPD_all)[1]='Date'
-  #DPD$Day=as.character(DPD$Day)
   
-  counts=as.data.frame(table(DPD_all$Group, DPD_all$Mon))
-  names(counts)[1:2]=c('Group', 'Mon')
+  DPD_all$percDPHpDPD=DPD_all$DPH/DPD_all$totalHours
+
+  counts=as.data.frame(table(DPD_all$Station, DPD_all$Mon))
+  names(counts)[1:2]=c('Station', 'Mon')
   posDays=DPD_all %>%
-    group_by(Group, Mon) %>%
+    group_by(Station, Mon) %>%
     tally(posDay)
   
-  perDays = merge(counts, posDays,by=c('Group', 'Mon'))
+  perDays = merge(counts, posDays,by=c('Station', 'Mon'))
   names(perDays)[4]='DPC'
   
   
@@ -34,12 +33,13 @@ DPHpDPDplot = function(selected_data){
   DPD_all$YM=as.factor(DPD_all$YM)
   
   # Calculate the mean number of DPH per day by station and month.
-  DPMo=DPD_all %>% 
-    group_by(Group, YM) %>% 
-    dplyr::summarize(mean = mean(n),
-                     uci = CI(n)[1],
-                     lci = CI(n)[3]) %>%
-    mutate(YM=YM %>% as.factor(),Station=Group %>% as.factor()) 
+  DPD_sub=DPD_all[DPD_all$totalHours==24,]
+  DPMo=DPD_sub %>% 
+    group_by(Station, YM) %>% 
+    dplyr::summarize(mean = mean(DPH),
+                     uci = CI(DPH)[1],
+                     lci = CI(DPH)[3]) %>%
+    mutate(YM=YM %>% as.factor(),Station=Station %>% as.factor()) 
   
   
   lvls <- expand.grid(lapply(DPMo[, c('Station', 'YM')], levels))
@@ -59,11 +59,11 @@ DPHpDPDplot = function(selected_data){
     xlab('Year-Month')
   
   
-  DPMonly=DPD_all %>% 
+  DPMonly=DPD_sub %>% 
     group_by(Mon) %>% 
-    dplyr::summarize(mean = mean(n),
-                     uci = CI(n)[1],
-                     lci = CI(n)[3]) %>%
+    dplyr::summarize(mean = mean(DPH),
+                     uci = CI(DPH)[1],
+                     lci = CI(DPH)[3]) %>%
     mutate(Month=Mon %>% as.factor())
   
   
